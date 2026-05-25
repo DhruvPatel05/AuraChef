@@ -17,6 +17,8 @@ actor CameraPipelineActor {
 @CameraPipelineActor
 final class VisionService: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     
+    static let shared = VisionService()
+
     private let captureSession = AVCaptureSession()
     private var continuation: AsyncThrowingStream<[String], Error>.Continuation?
     
