@@ -42,6 +42,13 @@ final class VisionService: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         continuation = nil
     }
     
+    @CameraPipelineActor
+    func getPreviewLayer() -> AVCaptureVideoPreviewLayer {
+        let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+        previewLayer.videoGravity = .resizeAspectFill
+        return previewLayer
+    }
+    
     private func configureCaptureSession() throws {
         guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
             throw CameraError.deviceUnavailable
