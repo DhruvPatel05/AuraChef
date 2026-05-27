@@ -91,6 +91,42 @@ final class AIService {
     }
 }
 
+// MARK: - On-Device Apple Intelligence Text Cleaner
+extension AIService {
+    
+    /// Uses Apple Intelligence to analyze raw, messy OCR text lines and extract the single primary food item name.
+    func extractMainItemName(from rawTextTokens: [String]) async -> String {
+        // If the AI service isn't ready or tokens are empty, fall back immediately
+        guard !rawTextTokens.isEmpty else {
+            return "Unknown Item"
+        }
+        
+        let tokenList = rawTextTokens.joined(separator: ", ")
+        
+        let cleaningPrompt = """
+        You are an elite inventory data cleaner. Analyze these messy raw text fragments scanned by a camera: [\(tokenList)].
+        Identify the single primary food product or grocery item name. 
+        Ignore ingredient lists, warning text, or random background characters. Return only the clean name.
+        """
+        
+        do {
+            // Call your app's existing Apple Intelligence / Language Model integration block
+            // Note: Update 'SystemLanguageModel' to match your project's exact AI model configuration wrapper name if different
+            let response = try await self.craftRecipe(
+                from: [cleaningPrompt],
+                lowSodium: false,
+                restrictedAllergens: []
+            )
+            
+            // Return the cleaned title result
+            return response.title.isEmpty ? (rawTextTokens.first ?? "Unknown Item") : response.title
+        } catch {
+            print("Failed to clean item name on-device: \(error)")
+            // Fallback: Grab the largest text string segment as the most likely brand name
+            return rawTextTokens.max(by: { $0.count < $1.count }) ?? "Unknown Item"
+        }
+    }
+}
 enum AIContextError: Error {
     case systemModelUnavailable
     case generationFailed
