@@ -28,12 +28,14 @@ final class PantryItem {
     var name: String = ""
     var dateAdded: Date = Date()
     var approximateDaysLeft: Int = 7
+    var quantity: Int = 1 // NEW: Tracks item count
     
-    init(name: String, approximateDaysLeft: Int = 7) {
+    init(name: String, approximateDaysLeft: Int = 7, quantity: Int = 1) {
         self.id = UUID().uuidString
         self.name = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         self.dateAdded = Date()
         self.approximateDaysLeft = approximateDaysLeft
+        self.quantity = quantity
     }
 }
 
