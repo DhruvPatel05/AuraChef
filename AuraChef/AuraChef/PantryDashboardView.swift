@@ -35,35 +35,46 @@ struct PantryDashboardView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            ZCoreMainLayout
-                .navigationTitle("AuraChef")
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button(action: toggleScanning) {
-                            Image(systemName: isScanning ? "xmark.circle.fill" : "camera.circle")
-                                .font(.title2)
-                                .foregroundColor(.auraSage)
+            NavigationStack {
+                ZCoreMainLayout
+                    .navigationTitle("AuraChef")
+                    .toolbar {
+                        // Left Side: Navigate to your brand-new selection checklist screen
+                        ToolbarItem(placement: .topBarLeading) {
+                            NavigationLink(destination: IngredientSelectionView()) {
+                                Image(systemName: "sparkles.rectangle.stack")
+                                    .font(.title3)
+                                    .foregroundColor(.auraSage)
+                            }
+                        }
+                        
+                        // Right Side: Camera Toggle Button (Kept intact)
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button(action: toggleScanning) {
+                                Image(systemName: isScanning ? "xmark.circle.fill" : "camera.circle")
+                                    .font(.title2)
+                                    .foregroundColor(.auraSage)
+                            }
                         }
                     }
-                }
-                .sheet(item: $generatedRecipe) { recipe in
-                    RecipeWizardView(recipe: recipe)
-                }
-                // Alert intercepting duplicates during processing loops
-                .alert("Item Already Present", isPresented: $showDuplicateAlert) {
-                    Button("Add One More (+1)") {
-                        incrementExistingItemQuantity(named: duplicateItemName)
-                        processNextPendingToken()
+                    .sheet(item: $generatedRecipe) { recipe in
+                        RecipeWizardView(recipe: recipe)
                     }
-                    Button("Skip", role: .cancel) {
-                        processNextPendingToken()
+                    // Alert intercepting duplicates during processing loops
+                    .alert("Item Already Present", isPresented: $showDuplicateAlert) {
+                        Button("Add One More (+1)") {
+                            incrementExistingItemQuantity(named: duplicateItemName)
+                            processNextPendingToken()
+                        }
+                        Button("Skip", role: .cancel) {
+                            processNextPendingToken()
+                        }
+                    } message: {
+                        Text("'\(duplicateItemName.capitalized)' is already in your pantry. Would you like to increase its quantity?")
                     }
-                } message: {
-                    Text("'\(duplicateItemName.capitalized)' is already in your pantry. Would you like to increase its quantity?")
-                }
+            }
         }
-    }
+    
     
     @ViewBuilder
     private var ZCoreMainLayout: some View {
