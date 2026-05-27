@@ -29,7 +29,7 @@ struct PantryDashboardView: View {
     @State private var showDuplicateAlert = false
     @State private var duplicateItemName = ""
     @State private var pendingTokensToProcess: [String] = []
-    
+    @State private var isCleaningTextName = false
     private var currentUserPreferences: UserPreferences {
         preferences.first ?? UserPreferences()
     }
@@ -302,13 +302,59 @@ struct PantryDashboardView: View {
     }
     
     private func captureCurrentFrameSnapshot() {
-        cameraTokens = streamTokensBuffer
-        hasCapturedSnapshot = true
-        activeScanningTask?.cancel()
-        activeScanningTask = nil
-        Task { await VisionService.shared.stopScanning() }
-    }
-    
+            let rawCapturedTokens = Array(streamTokensBuffer)
+            
+            // 1. Freeze and turn off the hardware camera sensor immediately
+            activeScanningTask?.cancel()
+            activeScanningTask = nil
+            
+            let currentFrameBuffer = VisionService.shared.currentSampleBuffer
+            Task { await VisionService.shared.stopScanning() }
+            
+            hasCapturedSnapshot = true
+            isCleaningTextName = true
+            
+            // 2. Start our unified photo triage decision execution pipeline
+            Task {
+                let aiService = await AIService.shared
+                var finalDetectedItemName = ""
+                
+                if let sampleBuffer = currentFrameBuffer {
+                    
+                    // STEP 1: Look for Barcodes first
+                    if let barcodePayload = await VisionService.shared.scanBarcodeInFrame(sampleBuffer) {
+                        if let onlineMatchName = await VisionService.shared.fetchProductNameFromWeb(barCode: barcodePayload) {
+                            finalDetectedItemName = onlineMatchName
+                        }
+                    }
+                    
+                    // STEP 2: Fallback to Labeled OCR Text if no barcode matches
+                    if finalDetectedItemName.isEmpty && !rawCapturedTokens.isEmpty {
+                        finalDetectedItemName = await aiService.extractMainItemName(from: rawCapturedTokens)
+                    }
+                    
+                    // STEP 3: Fallback to Object Shape Classification (Fresh Fruits/Vegetables/Eggs)
+                    if finalDetectedItemName.isEmpty {
+                        if let visualMatch = await VisionService.shared.classifyImageFrame(sampleBuffer) {
+                            finalDetectedItemName = visualMatch
+                                .replacingOccurrences(of: "_", with: " ")
+                                .capitalized
+                        }
+                    }
+                }
+                
+                // Absolute baseline fallback safety wrapper
+                if finalDetectedItemName.isEmpty {
+                    finalDetectedItemName = "Scanned Item"
+                }
+                
+                await MainActor.run {
+                    // Display the single winner result on the screen inside our review capsule view
+                    self.cameraTokens = [finalDetectedItemName]
+                    self.isCleaningTextName = false
+                }
+            }
+        }
     private func resetCameraScanSequence() {
         hasCapturedSnapshot = false
         cameraTokens.removeAll()
